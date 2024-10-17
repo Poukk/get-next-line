@@ -20,8 +20,7 @@
 # include <stdlib.h>
 # include <unistd.h>
 
-char	*read_file(int fd);
-char	*get_line(char *buffer);
 char	*ft_strchr(const char *s, int c);
 char	*ft_strjoin(char const *s1, char const *s2);
+char	*ft_strdup(const char *s);
 #endif

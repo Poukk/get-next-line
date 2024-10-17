@@ -10,48 +10,89 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-// remove the line read from buffer
-//char	*remove_past_line(char *buffer);
-//char *get_next_line(int fd);
-
 #include "get_next_line.h"
 
-char	*read_file(int fd)
+char    *read_file(int fd, char *buffer)
 {
-	char	*buffer;
-	char	*temp;
-	ssize_t	bytes_read;
+    char	*temp;
+	char	*new_buffer;
+    ssize_t	bytes_read;
 
-	buffer = malloc(BUFFER_SIZE + 1);
-	if (buffer == NULL)
+    temp = malloc(BUFFER_SIZE + 1);
+    if (!temp)
 		return (NULL);
-	while (ft_strchr(buffer, '\n'))
-	{
-		bytes_read = read(fd, buffer, BUFFER_SIZE);
-		if (bytes_read < 0)
+	bytes_read = 1;
+    while (!ft_strchr(temp, '\n') && bytes_read > 0)
+    {
+        bytes_read = read(fd, temp, BUFFER_SIZE);
+        if (bytes_read < 0)
+        {
+            free(temp);
+            return (NULL);
+        }
+		temp[bytes_read] = '\0';
+		new_buffer = ft_strjoin(buffer, temp);
+		free(buffer);
+		buffer = new_buffer;
+		if (!buffer)
 		{
-			free(buffer);
+			free(temp);
 			return (NULL);
 		}
-		ft_strjoin(buffer, temp);
-		
 	}
-	buffer[bytes_read] = '\0';
-	return (buffer);
+	free(temp);
+    return (buffer);
 }
 
-char	*get_line(char *buffer)
+char	*get_current_line(char	*buffer)
 {
+	size_t	i;
 	char	*line;
-	ssize_t	i;
 
-	line = NULL;
 	i = 0;
-	while (*buffer != '\n' && *buffer != '\0')
+	while (buffer[i] != '\n')
+		i++;
+	line = malloc(sizeof(char) * i + 2);
+	if (!line)
+		return (NULL);
+	i = 0;
+	while (buffer[i] && buffer[i] != '\n')
 	{
-		line[i] = buffer[i];
+		line[i]  = buffer[i];
 		i++;
 	}
+	if (buffer[i] == '\n')
+		line[i] = '\n';
+	line[i++] = '\0';
+	return (line);
+}
 
+char	*trim_buffer(char *buffer, char *current_line)
+{
+	size_t	i;
+	char	*new_buffer;
+
+	i = 0;
+	while (current_line[i])
+		i++;
+	if (buffer[i] == '\n')
+		i++;
+	new_buffer = ft_strdup(buffer + i);
+	free(buffer);
+	return (new_buffer);
+}
+
+char	*get_next_line(int fd)
+{
+	static char	*buffer;
+	char		*line; 
+
+	if (fd < 0 || BUFFER_SIZE <= 0)
+		return (NULL);
+	if (!buffer)
+		buffer = ft_strdup("");
+	buffer = read_file(fd, buffer);
+	line = get_current_line(buffer);
+	buffer = trim_buffer(buffer, line);
 	return line;
 }
