@@ -5,105 +5,120 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: alexanfe <alexanfe@student.42sp.org.br>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/10/16 17:24:21 by alexanfe          #+#    #+#             */
-/*   Updated: 2024/10/16 17:25:00 by alexanfe         ###   ########.fr       */
+/*   Created: 2024/10/22 19:54:22 by alexanfe          #+#    #+#             */
+/*   Updated: 2024/10/22 19:54:30 by alexanfe         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-char	*ft_strchr(const char *s, int c)
+t_buffer	init_clean_buffer(t_buffer *buffer, int fd)
 {
-	while (*s)
+	if (buffer->string)
 	{
-		if (*s == (char)c)
-			return ((char *)s);
-		s++;
+		clear_string(buffer->string);
+		buffer->string = NULL;
 	}
-	if (c == '\0')
-		return ((char *)s);
-	return (NULL);
-}
-
-size_t	ft_strlen(const char *s)
-{
-	int	i;
-
-	i = 0;
-	while (s[i])
-		i++;
-	return (i);
-}
-
-char	*ft_strdup(const char *s)
-{
-	size_t		src_len;
-	size_t		i;
-	char		*dst;
-
-	src_len = ft_strlen(s);
-	dst = malloc(sizeof(char) * src_len + 1);
-	i = 0;
-	while (s[i])
+	if (fd < 0)
 	{
-		dst[i] = s[i];
-		i++;
+		buffer->total_read = -1;
+		return (*buffer);
 	}
-	dst[i] = '\0';
-	return (dst);
+	buffer->position = 0;
+	while (buffer->position < BUFFER_SIZE)
+		buffer->buffer[buffer->position++] = '\0';
+	buffer->position = 0;
+	buffer->string = NULL;
+	buffer->length = 0;
+	buffer->fd = fd;
+	buffer->total_read = read(fd, buffer->buffer, BUFFER_SIZE);
+	return (*buffer);
 }
 
-size_t	ft_strlcpy(char *dst, const char *src, size_t size)
+void	clear_string(t_string *str)
 {
-	unsigned int	src_len;
-	unsigned int	i;
+	t_string	*temp;
 
-	src_len = 0;
-	while (src[src_len] != '\0')
-		src_len++;
-	if (size > 0)
+	while (str)
 	{
-		i = 0;
-		while (i < size - 1 && src[i] != '\0')
-		{
-			dst[i] = src[i];
-			i++;
-		}
-		dst[i] = '\0';
+		temp = str->next;
+		free(str);
+		str = temp;
 	}
-	return (src_len);
+	temp = NULL;
 }
 
-size_t	ft_strlcat(char *dst, const char *src, size_t size)
+void	build_string(t_string **string_head, char character)
 {
-	size_t	dst_len;
-	size_t	src_len;
-	size_t	i;
+	t_string	*new_character;
+	t_string	*current;
 
-	dst_len = ft_strlen(dst);
-	src_len = ft_strlen(src);
-	if (size <= dst_len)
-		return (size + src_len);
-	i = 0;
-	while (src[i] && dst_len + i + 1 < size)
+	new_character = (t_string *)malloc(sizeof(t_string));
+	if (!new_character)
 	{
-		dst[dst_len + i] = src[i];
-		i++;
+		clear_string(*string_head);
+		*string_head = NULL;
+		return ;
 	}
-	dst[dst_len + i] = '\0';
-	return (dst_len + src_len);
+	new_character->character = character;
+	new_character->next = NULL;
+	if (!*string_head)
+	{
+		*string_head = new_character;
+		return ;
+	}
+	current = *string_head;
+	while (current->next)
+		current = current->next;
+	current->next = new_character;
 }
 
-char	*ft_strjoin(char const *s1, char const *s2)
+char	*alloc_line(t_buffer *buffer)
 {
-	char	*new_string;
-	size_t	total_len;
+	t_string	*current;
+	char		*line;
+	int			i;
 
-	total_len = ft_strlen(s1) + ft_strlen(s2) + 1;
-	new_string = malloc(sizeof(char) * total_len);
-	if (!new_string)
+	line = (char *)malloc(buffer->length + 1);
+	if (!line)
 		return (NULL);
-	ft_strlcpy(new_string, s1, ft_strlen(s1) + 1);
-	ft_strlcat(new_string, s2, total_len);
-	return (new_string);
+	i = 0;
+	current = NULL;
+	while (buffer->string)
+	{
+		current = buffer->string->next;
+		line[i] = buffer->string->character;
+		buffer->string = current;
+		i++;
+	}
+	clear_string(buffer->string);
+	line[i] = '\0';
+	return (line);
+}
+
+char	*get_current_line(t_buffer *buffer)
+{
+	buffer->length = 0;
+	while (buffer->total_read > 0)
+	{
+		build_string(&buffer->string, buffer->buffer[buffer->position]);
+		if (buffer->buffer[buffer->position] == '\n')
+			break ;
+		buffer->position++;
+		buffer->length++;
+		if (buffer->position >= buffer->total_read)
+		{
+			buffer->position = 0;
+			buffer->total_read = read(buffer->fd, buffer->buffer, BUFFER_SIZE);
+			if (buffer->total_read < 0)
+			{
+				clear_string(buffer->string);
+				buffer->string = NULL;
+				return (NULL);
+			}
+		}
+	}
+	buffer->position++;
+	buffer->length++;
+	return (alloc_line(buffer));
 }
