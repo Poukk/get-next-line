@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "get_next_line.h"
+#include <stdlib.h>
 
 t_buffer	init_clean_buffer(t_buffer *buffer, int fd)
 {
@@ -88,10 +89,10 @@ char	*alloc_line(t_buffer *buffer)
 	{
 		current = buffer->string->next;
 		line[i] = buffer->string->character;
+		free(buffer->string);
 		buffer->string = current;
 		i++;
 	}
-	clear_string(buffer->string);
 	line[i] = '\0';
 	return (line);
 }
