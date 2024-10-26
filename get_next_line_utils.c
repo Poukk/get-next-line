@@ -5,34 +5,84 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: alexanfe <alexanfe@student.42sp.org.br>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/10/22 19:54:22 by alexanfe          #+#    #+#             */
-/*   Updated: 2024/10/22 19:54:30 by alexanfe         ###   ########.fr       */
+/*   Created: 2024/10/26 17:28:46 by alexanfe          #+#    #+#             */
+/*   Updated: 2024/10/26 17:28:51 by alexanfe         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-t_buffer	init_clean_buffer(t_buffer *buffer, int fd)
+t_buffer	*init_clean_buffer(int fd)
 {
-	if (buffer->string)
-	{
-		clear_string(buffer->string);
-		buffer->string = NULL;
-	}
-	if (fd < 0)
-	{
-		buffer->total_read = -1;
-		return (*buffer);
-	}
+	t_buffer	*buffer;
+	int			i;
+
+	buffer = (t_buffer *)malloc(sizeof(t_buffer));
+	if (!buffer)
+		return (NULL);
+	buffer->fd = fd;
 	buffer->position = 0;
-	while (buffer->position < BUFFER_SIZE)
-		buffer->buffer[buffer->position++] = '\0';
-	buffer->position = 0;
+	i = 0;
+	while (i < BUFFER_SIZE)
+		buffer->buffer[i++] = '\0';
 	buffer->string = NULL;
 	buffer->length = 0;
-	buffer->fd = fd;
-	buffer->total_read = read(fd, buffer->buffer, BUFFER_SIZE);
-	return (*buffer);
+	buffer->total_read = 0;
+	buffer->next = NULL;
+	return (buffer);
+}
+
+t_buffer	*get_buffer(t_buffer **head, int fd)
+{
+	t_buffer	*current;
+
+	if (!*head)
+	{
+		*head = init_clean_buffer(fd);
+		return (*head);
+	}
+	current = *head;
+	while (current)
+	{
+		if (current->fd == fd)
+			return (current);
+		if (!current->next)
+		{
+			current->next = init_clean_buffer(fd);
+			return (current->next);
+		}
+		current = current->next;
+	}
+	return (NULL);
+}
+
+void	remove_buffer(t_buffer **head, int fd)
+{
+	t_buffer	*current;
+	t_buffer	*prev;
+
+	if (!*head)
+		return ;
+	if ((*head)->fd == fd)
+	{
+		current = *head;
+		*head = (*head)->next;
+		free(current);
+		return ;
+	}
+	prev = *head;
+	current = (*head)->next;
+	while (current)
+	{
+		if (current->fd == fd)
+		{
+			prev->next = current->next;
+			free(current);
+			return ;
+		}
+		prev = current;
+		current = current->next;
+	}
 }
 
 void	clear_string(t_string *str)
@@ -71,54 +121,4 @@ void	build_string(t_string **string_head, char character)
 	while (current->next)
 		current = current->next;
 	current->next = new_character;
-}
-
-char	*alloc_line(t_buffer *buffer)
-{
-	t_string	*current;
-	char		*line;
-	int			i;
-
-	line = (char *)malloc(buffer->length + 1);
-	if (!line)
-		return (NULL);
-	i = 0;
-	current = NULL;
-	while (buffer->string)
-	{
-		current = buffer->string->next;
-		line[i] = buffer->string->character;
-		free(buffer->string);
-		buffer->string = current;
-		i++;
-	}
-	line[i] = '\0';
-	return (line);
-}
-
-char	*get_current_line(t_buffer *buffer)
-{
-	buffer->length = 0;
-	while (buffer->total_read > 0)
-	{
-		build_string(&buffer->string, buffer->buffer[buffer->position]);
-		if (buffer->buffer[buffer->position] == '\n')
-			break ;
-		buffer->position++;
-		buffer->length++;
-		if (buffer->position >= buffer->total_read)
-		{
-			buffer->position = 0;
-			buffer->total_read = read(buffer->fd, buffer->buffer, BUFFER_SIZE);
-			if (buffer->total_read < 0)
-			{
-				clear_string(buffer->string);
-				buffer->string = NULL;
-				return (NULL);
-			}
-		}
-	}
-	buffer->position++;
-	buffer->length++;
-	return (alloc_line(buffer));
 }

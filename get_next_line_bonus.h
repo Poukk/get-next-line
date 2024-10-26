@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   get_next_line.h                                    :+:      :+:    :+:   */
+/*   get_next_line_bonus.h                              :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: alexanfe <alexanfe@student.42sp.org.br>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/10/22 20:29:17 by alexanfe          #+#    #+#             */
-/*   Updated: 2024/10/22 20:30:30 by alexanfe         ###   ########.fr       */
+/*   Created: 2024/10/26 17:31:27 by alexanfe          #+#    #+#             */
+/*   Updated: 2024/10/26 17:31:52 by alexanfe         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,20 +28,22 @@ typedef struct s_string
 
 typedef struct s_buffer
 {
-	int			position;
-	int			total_read;
-	int			length;
-	int			fd;
-	char		buffer[BUFFER_SIZE];
-	t_string	*string;
+	int				fd;
+	int				position;
+	int				total_read;
+	int				length;
+	char			buffer[BUFFER_SIZE];
+	t_string		*string;
+	struct s_buffer	*next;
 }	t_buffer;
 
 char		*get_next_line(int fd);
-
-t_buffer	init_clean_buffer(t_buffer *buffer, int fd);
+t_buffer	*init_clean_buffer(int fd);
 void		clear_string(t_string *str);
 void		build_string(t_string **string_head, char character);
 char		*alloc_line(t_buffer *buffer);
 char		*get_current_line(t_buffer *buffer);
+t_buffer	*get_buffer(t_buffer **head, int fd);
+void		remove_buffer(t_buffer **head, int fd);
 
 #endif
